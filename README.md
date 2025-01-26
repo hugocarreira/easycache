@@ -52,7 +52,7 @@ func main() {
 		MaxSize:             5,
 		TTL:                 30 * time.Second,
 		EvictionPolicy:      cache.Basic,
-		MetricsEnabled:      false,
+		Metrics:      	     false,
 		MemoryLimits:        0,
 		MemoryCheckInterval: 0,
 		CleanupInterval:     10 * time.Second,
@@ -285,5 +285,5 @@ go test -bench=. -benchmem ./tests
 
 ## 💡 Contributing
 
-Please see [`CONTRIBUTING`](CONTRIBUTING.md)for details on submitting patches and the contribution workflow.
+Please see [`CONTRIBUTING`](CONTRIBUTING.md) for details on submitting patches and the contribution workflow.
 
