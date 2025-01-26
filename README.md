@@ -1,11 +1,12 @@
 # 🚀 EasyCache - A Fast In-Memory Cache for Go
 
 [![Go Version](https://img.shields.io/badge/go-1.23.5-blue)](https://golang.org/)
-[![License](https://img.shields.io/github/license/hugocarreira/easycache)](LICENSE)
-[![Build Status](https://github.com/hugocarreira/easycache/actions/workflows/tests.yml/badge.svg)](https://github.com/hugocarreira/easycache/actions)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/hugocarreira/easycache)](https://pkg.go.dev/github.com/hugocarreira/easycache)
 [![Build Status](https://github.com/hugocarreira/easycache/actions/workflows/tests.yml/badge.svg)](https://github.com/hugocarreira/easycache/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hugocarreira/easycache)](https://goreportcard.com/report/github.com/hugocarreira/easycache)
-[![PkgGoDev](https://pkg.go.dev/badge/github.com/hugocarreira/easycache)](https://pkg.go.dev/github.com/hugocarreira/easycache)
+[![Open Source Helpers](https://www.codetriage.com/hugocarreira/easycache/badges/users.svg)](https://www.codetriage.com/hugocarreira/easycache)
+[![Release](https://img.shields.io/github/v/release/hugocarreira/easycache.svg?style=flat-square)](https://hugocarreira/easycache/releases)
+[![License](https://img.shields.io/github/license/hugocarreira/easycache)](LICENSE)
 
 
 EasyCache is a **high-performance, in-memory caching library** for Go, supporting multiple **eviction policies** like **FIFO, LRU, LFU**, and **TTL-based expiration**. It is **thread-safe**, lightweight, and provides **built-in metrics**.
