@@ -1,10 +1,9 @@
-# 🚀 EasyCache - A Fast In-Memory Cache for Go
+## 🚀 EasyCache - A simple way to use in-memory cache in Golang
 
 [![Go Version](https://img.shields.io/badge/go-1.23.5-blue)](https://golang.org/)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/hugocarreira/easycache)](https://pkg.go.dev/github.com/hugocarreira/easycache)
 [![Build Status](https://github.com/hugocarreira/easycache/actions/workflows/tests.yml/badge.svg)](https://github.com/hugocarreira/easycache/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hugocarreira/easycache)](https://goreportcard.com/report/github.com/hugocarreira/easycache)
-[![Open Source Helpers](https://www.codetriage.com/hugocarreira/easycache/badges/users.svg)](https://www.codetriage.com/hugocarreira/easycache)
 [![Release](https://img.shields.io/github/v/release/hugocarreira/easycache.svg?style=flat-square)](https://hugocarreira/easycache/releases)
 [![License](https://img.shields.io/github/license/hugocarreira/easycache)](LICENSE)
 
@@ -253,34 +252,6 @@ c := cache.New(&cache.Config{
 	MemoryLimits:        100 * 1024 * 1024,   // 100 MB limit
 	MemoryCheckInterval: 30 * time.Second,    // Check memory every 30s
 })
-```
-
-
-## 🚀 Performance Benchmarks
-
-We ran performance benchmarks on EasyCache to measure the efficiency of `Set()`, `Get()`, `Delete()`, and eviction policies (`FIFO`, `LRU`, `LFU`).
-
-| Benchmark                | Iterations  | Time per operation | Memory used | Allocations per op |
-|--------------------------|------------|--------------------|-------------|--------------------|
-| **`BenchmarkCacheSet`**   | 2,936,356  | **408.4 ns/op**    | **122 B/op**  | **5 allocs/op** |
-| **`BenchmarkCacheGet`**   | 39,143,538 | **30.79 ns/op**    | **0 B/op**    | **0 allocs/op** |
-| **`BenchmarkCacheDelete`**| 5,376,940  | **223.3 ns/op**    | **96 B/op**   | **3 allocs/op** |
-| **`BenchmarkFIFOEviction`** | 3,065,480 | **391.7 ns/op**    | **122 B/op**  | **5 allocs/op** |
-| **`BenchmarkLRUEviction`** | 3,045,759  | **402.1 ns/op**    | **122 B/op**  | **5 allocs/op** |
-| **`BenchmarkLFUEviction`** | 2,916,150  | **394.3 ns/op**    | **88 B/op**   | **4 allocs/op** |
-
-**Tested on:**  
-- **Go Version:** 1.23.5  
-- **Cache Configuration:** `MaxSize = 10,000`, `TTL = 60s`  
-
----
-
-### 🛠️ Running the Benchmarks  
-
-To run the benchmarks yourself, use:  
-
-```sh
-go test -bench=. -benchmem ./tests
 ```
 
 ## 💡 Contributing
