@@ -1,6 +1,6 @@
 ## 🚀 EasyCache - A simple way to use in-memory cache in Golang
 
-[![Go Version](https://img.shields.io/badge/go-1.23.5-blue)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/go-1.25-blue)](https://go.dev/)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/hugocarreira/easycache)](https://pkg.go.dev/github.com/hugocarreira/easycache)
 [![Build Status](https://github.com/hugocarreira/easycache/actions/workflows/tests.yml/badge.svg)](https://github.com/hugocarreira/easycache/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hugocarreira/easycache)](https://goreportcard.com/report/github.com/hugocarreira/easycache)
@@ -267,6 +267,25 @@ c := cache.New(&cache.Config{
 
 Call `Close()` when the cache is no longer needed. This stops the background
 TTL cleanup and memory-monitoring goroutines; calling it more than once is safe.
+
+## 📊 Benchmarks
+
+Run the benchmarks with:
+
+```sh
+go test -run '^$' -bench=. -benchmem ./tests
+```
+
+Latest local run with Go 1.25.9 on Linux/amd64 (Intel i9-10900KF):
+
+| Benchmark | ns/op | B/op | allocs/op |
+|-----------|------:|-----:|----------:|
+| `BenchmarkCacheSet` | 263.7 | 96 | 3 |
+| `BenchmarkCacheGet` | 31.83 | 0 | 0 |
+| `BenchmarkCacheDelete` | 158.8 | 96 | 3 |
+| `BenchmarkFIFOEviction` | 257.4 | 95 | 2 |
+| `BenchmarkLRUEviction` | 259.9 | 95 | 2 |
+| `BenchmarkLFUEviction` | 208.1 | 39 | 1 |
 
 ## 💡 Contributing
 

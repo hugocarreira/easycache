@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-EasyCache is a Go 1.23.5 module (`github.com/hugocarreira/easycache`). The public `cache/` package selects an eviction strategy and exposes configuration and metrics. Strategy implementations live in `basic/`, `fifo/`, `lru/`, and `lfu/`; shared behavior is defined in `engine/`. Integration-style tests and benchmarks are in `tests/`. Repository documentation is maintained in `README.md` and `CONTRIBUTING.md`, while GitHub Actions configuration lives in `.github/workflows/tests.yml`.
+EasyCache is a Go 1.25 module (`github.com/hugocarreira/easycache`). The public `cache/` package selects an eviction strategy and exposes configuration and metrics. Strategy implementations live in `basic/`, `fifo/`, `lru/`, and `lfu/`; shared behavior is defined in `engine/`. Integration-style tests and benchmarks are in `tests/`. Repository documentation is maintained in `README.md` and `CONTRIBUTING.md`, while GitHub Actions configuration lives in `.github/workflows/tests.yml`.
 
 Keep policy-specific logic inside its strategy package. Changes to the public API belong in `cache/`, with corresponding tests in `tests/`.
 
