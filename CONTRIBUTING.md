@@ -46,6 +46,10 @@ go test -race ./...
 go vet ./...
 ```
 
+```sh
+go test -coverpkg=./... ./tests
+```
+
 ####  🚀 Performance Benchmarks  
 
 Run benchmarks locally when evaluating performance-sensitive changes:

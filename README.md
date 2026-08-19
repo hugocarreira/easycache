@@ -278,6 +278,8 @@ go test -run '^$' -bench=. -benchmem ./tests
 
 Latest local run with Go 1.25.9 on Linux/amd64 (Intel i9-10900KF):
 
+Current aggregate statement coverage: **99.0%** (`go test -coverpkg=./... ./tests`).
+
 | Benchmark | ns/op | B/op | allocs/op |
 |-----------|------:|-----:|----------:|
 | `BenchmarkCacheSet` | 263.7 | 96 | 3 |

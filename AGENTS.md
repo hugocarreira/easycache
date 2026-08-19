@@ -11,6 +11,7 @@ Keep policy-specific logic inside its strategy package. Changes to the public AP
 - `go test ./...` runs every package and the complete test suite.
 - `go test ./... -v` runs the complete test suite used by CI.
 - `go test -race ./...` checks concurrent cache operations for data races.
+- `go test -coverpkg=./... ./tests` reports aggregate statement coverage across the module.
 - `go test -run '^$' -bench=. -benchmem ./tests` runs benchmarks without rerunning tests and includes allocation statistics.
 - `go vet ./...` performs standard static analysis.
 - `gofmt -w cache/*.go tests/*.go` formats changed Go files; include other edited package paths as needed.
