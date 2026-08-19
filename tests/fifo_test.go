@@ -22,6 +22,10 @@ func (suite *FIFOTestSuite) SetupTest() {
 	})
 }
 
+func (suite *FIFOTestSuite) TearDownTest() {
+	suite.c.Close()
+}
+
 // Test FIFO (First-In, First-Out)
 func (suite *FIFOTestSuite) TestFIFOEviction() {
 	suite.c.Set("A", "Item A")

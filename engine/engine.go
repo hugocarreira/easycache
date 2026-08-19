@@ -8,7 +8,8 @@ import "time"
 // Implementations of this interface determine how items are stored, retrieved, and evicted.
 type Engine interface {
 	// Get retrieves a value from the cache by its key.
-	// Returns (value, true) if the key exists, otherwise returns (nil, false).
+	// Returns (value, true) if the key exists and is not expired, otherwise
+	// returns (nil, false).
 	Get(key string) (any, bool)
 
 	// Set stores a key-value pair in the cache.

@@ -1,6 +1,6 @@
 ## 🚀 EasyCache - A simple way to use in-memory cache in Golang
 
-[![Go Version](https://img.shields.io/badge/go-1.23.5-blue)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/go-1.25-blue)](https://go.dev/)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/hugocarreira/easycache)](https://pkg.go.dev/github.com/hugocarreira/easycache)
 [![Build Status](https://github.com/hugocarreira/easycache/actions/workflows/tests.yml/badge.svg)](https://github.com/hugocarreira/easycache/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hugocarreira/easycache)](https://goreportcard.com/report/github.com/hugocarreira/easycache)
@@ -28,7 +28,7 @@ There are several caching solutions available, so why choose EasyCache?
 ✅ **Multiple eviction policies** – Supports FIFO, LRU, LFU, and TTL-based caching.  
 ✅ **Thread-safe** – Uses `sync.RWMutex` to handle concurrent access.  
 ✅ **Memory-efficient** – Allows memory usage limits and automatic cleanup.  
-✅ **Built-in metrics** – Track hits, misses, and evictions for performance insights.  
+✅ **Built-in metrics** – Track cache hits and misses for performance insights.  
 
 
 ## 🛠️ Basic Usage
@@ -48,10 +48,10 @@ import (
 func main() {
 	// Create a new cache with Basic eviction policy
 	c := cache.New(&cache.Config{
-		MaxSize:             5,
+		MaxSize:             0,
 		TTL:                 30 * time.Second,
 		EvictionPolicy:      cache.Basic,
-		Metrics:      	     false,
+		Metrics:             false,
 		MemoryLimits:        0,
 		MemoryCheckInterval: 0,
 		CleanupInterval:     10 * time.Second,
@@ -77,6 +77,9 @@ func main() {
 
 	// Check cache length
 	fmt.Println("Cache size:", c.Len()) // Output: 1
+
+	// Stop background cleanup when the cache is no longer needed
+	c.Close()
 }
 
 ```
@@ -96,12 +99,14 @@ EasyCache supports **four different eviction policies**:
 
 The **Basic** cache is a simple TTL-based cache with no eviction policy.  
 Items are **only removed when they expire** based on their **TTL (Time-To-Live)**.  
+Set `TTL` to `0` or a negative duration to keep items until they are deleted.  
 
 #### **Example:**
 ```go
 package main
 
 import (
+	"fmt"
 	"time"
 	"github.com/hugocarreira/easycache/cache"
 )
@@ -118,7 +123,8 @@ func main() {
 	c.Set("session1", "user123")
 
     // Get item from cache
-	value, found := c.Set("session1")
+	value, found := c.Get("session1")
+	fmt.Println(value, found)
 }
 ```
 
@@ -144,8 +150,9 @@ func main() {
 
 	// Add items to the cache
 	c.Set("A", "Item A")
+	c.Set("B", "Item B")
 
-	// Adding a second item causes "A" to be evicted
+	// Adding a third item causes the oldest item ("A") to be evicted
 	c.Set("D", "Item D")
 }
 ```
@@ -242,8 +249,10 @@ c := cache.New(&cache.Config{
 ### 🔄 Memory Usage Monitoring & Cleanup
 EasyCache allows automatic memory checks to prevent the cache from exceeding a defined memory limit.
 
-The MemoryLimits parameter sets a max memory usage (in bytes),
-and the MemoryCheckInterval defines how often memory is checked.
+The MemoryLimits parameter sets a maximum **process heap allocation** (in bytes),
+and the MemoryCheckInterval defines how often memory is checked. When the limit
+is exceeded, the configured policy evicts one item (or removes expired Basic
+items).
 
 #### **Example:**
 ```go
@@ -254,7 +263,32 @@ c := cache.New(&cache.Config{
 })
 ```
 
+### Closing a cache
+
+Call `Close()` when the cache is no longer needed. This stops the background
+TTL cleanup and memory-monitoring goroutines; calling it more than once is safe.
+
+## 📊 Benchmarks
+
+Run the benchmarks with:
+
+```sh
+go test -run '^$' -bench=. -benchmem ./tests
+```
+
+Latest local run with Go 1.25.9 on Linux/amd64 (Intel i9-10900KF):
+
+Current aggregate statement coverage: **99.3%** (`go test -coverpkg=./... -coverprofile=/tmp/easycache.cover ./...`). Pull requests must keep coverage at or above 90% and must not reduce it versus the base branch; CI reports both values in a PR comment.
+
+| Benchmark | ns/op | B/op | allocs/op |
+|-----------|------:|-----:|----------:|
+| `BenchmarkCacheSet` | 263.7 | 96 | 3 |
+| `BenchmarkCacheGet` | 31.83 | 0 | 0 |
+| `BenchmarkCacheDelete` | 158.8 | 96 | 3 |
+| `BenchmarkFIFOEviction` | 257.4 | 95 | 2 |
+| `BenchmarkLRUEviction` | 259.9 | 95 | 2 |
+| `BenchmarkLFUEviction` | 208.1 | 39 | 1 |
+
 ## 💡 Contributing
 
 Please see [`CONTRIBUTING`](CONTRIBUTING.md) for details on submitting patches and the contribution workflow.
-

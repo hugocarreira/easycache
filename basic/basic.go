@@ -18,9 +18,10 @@ import (
 type Basic struct {
 	data            map[string]*cacheItem
 	lock            sync.RWMutex
-	maxSize         int
 	ttl             time.Duration
 	cleanupInterval time.Duration
+	stop            chan struct{}
+	closeOnce       sync.Once
 }
 
 type cacheItem struct {
@@ -29,24 +30,30 @@ type cacheItem struct {
 	expiresAt time.Time
 }
 
-func New(maxSize int, ttl, cleanupInterval time.Duration) engine.Engine {
+func New(_ int, ttl, cleanupInterval time.Duration) engine.Engine {
 	c := &Basic{
 		data:            make(map[string]*cacheItem),
-		maxSize:         maxSize,
 		ttl:             ttl,
 		cleanupInterval: cleanupInterval,
+		stop:            make(chan struct{}),
 	}
 
-	go c.startCleanup()
+	if cleanupInterval > 0 {
+		go c.startCleanup()
+	}
 	return c
 }
 
 func (c *Basic) Get(key string) (any, bool) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
 	item, exists := c.data[key]
-	if !exists || time.Now().After(item.expiresAt) {
+	if !exists {
+		return nil, false
+	}
+
+	if isExpired(item, time.Now()) {
 		delete(c.data, key)
 		return nil, false
 	}
@@ -61,7 +68,7 @@ func (c *Basic) Set(key string, value any) {
 	c.data[key] = &cacheItem{
 		key:       key,
 		value:     value,
-		expiresAt: time.Now().Add(c.ttl),
+		expiresAt: expiration(c.ttl),
 	}
 }
 
@@ -92,7 +99,7 @@ func (c *Basic) Has(key string) bool {
 		return false
 	}
 
-	if time.Now().After(item.expiresAt) {
+	if isExpired(item, time.Now()) {
 		return false
 	}
 
@@ -106,7 +113,7 @@ func (c *Basic) Len() int {
 	count := 0
 	now := time.Now()
 	for _, item := range c.data {
-		if item.expiresAt.After(now) {
+		if !isExpired(item, now) {
 			count++
 		}
 	}
@@ -120,7 +127,7 @@ func (c *Basic) Evict() {
 
 	now := time.Now()
 	for key, item := range c.data {
-		if item.expiresAt.Before(now) {
+		if isExpired(item, now) {
 			delete(c.data, key)
 		}
 	}
@@ -131,36 +138,57 @@ func (c *Basic) IsExpirable() bool {
 }
 
 func (c *Basic) IsExpired(key string) bool {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
 	item, exists := c.data[key]
 	if !exists {
 		return true
 	}
 
-	return time.Now().After(item.expiresAt)
+	return isExpired(item, time.Now())
 }
 
 func (c *Basic) startCleanup() {
 	ticker := time.NewTicker(c.cleanupInterval)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		c.cleanupExpiredItems()
+	for {
+		select {
+		case <-ticker.C:
+			c.cleanupExpiredItems()
+		case <-c.stop:
+			return
+		}
 	}
 }
 
 func (c *Basic) cleanupExpiredItems() {
-	for {
-		time.Sleep(time.Second)
-		c.lock.Lock()
-		now := time.Now()
-		for key, item := range c.data {
-			if item.expiresAt.Before(now) {
-				delete(c.data, key)
-			}
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	now := time.Now()
+	for key, item := range c.data {
+		if isExpired(item, now) {
+			delete(c.data, key)
 		}
-		c.lock.Unlock()
 	}
+}
+
+func (c *Basic) Close() {
+	c.closeOnce.Do(func() {
+		close(c.stop)
+	})
+}
+
+func expiration(ttl time.Duration) time.Time {
+	if ttl <= 0 {
+		return time.Time{}
+	}
+
+	return time.Now().Add(ttl)
+}
+
+func isExpired(item *cacheItem, now time.Time) bool {
+	return !item.expiresAt.IsZero() && !now.Before(item.expiresAt)
 }

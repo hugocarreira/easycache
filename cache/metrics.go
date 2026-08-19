@@ -49,7 +49,14 @@ func (m *Metrics) HitRate() float64 {
 }
 
 func (m *Metrics) MissRate() float64 {
-	return 1 - m.HitRate()
+	hits := m.Hits()
+	misses := m.Misses()
+	total := hits + misses
+	if total == 0 {
+		return 0
+	}
+
+	return float64(misses) / float64(total)
 }
 
 func (m *Metrics) GetMetrics() *Metrics {

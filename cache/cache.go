@@ -37,12 +37,9 @@ const (
 // It acts as a wrapper around specific caching strategies such as FIFO, LRU, LFU,
 // or a simple TTL-based cache. The eviction policy is defined in the CacheConfig.
 //
-// The Cache structure provides thread-safe access with read/write locks and
-// includes built-in metrics for monitoring performance.
+// The Cache structure provides thread-safe access through its selected engine
+// and includes built-in metrics for monitoring performance.
 type Cache struct {
-	// lock ensures thread-safe access to the cache data.
-	lock sync.RWMutex
-
 	// engine represents the selected cache strategy (FIFO, LRU, LFU, or Basic).
 	// It implements the CacheInterface to allow dynamic eviction policies.
 	engine engine.Engine
@@ -53,39 +50,52 @@ type Cache struct {
 
 	// metrics tracks cache statistics, including hits and misses.
 	metrics *Metrics
+
+	stop      chan struct{}
+	closeOnce sync.Once
 }
 
 func New(cfg *Config) *Cache {
-	if cfg == nil {
-		cfg = defaultConfig()
+	config := *defaultConfig()
+	if cfg != nil {
+		config = *cfg
 	}
 
-	if cfg.CleanupInterval <= 0 {
-		cfg.CleanupInterval = 10 * time.Second
+	if config.CleanupInterval <= 0 {
+		config.CleanupInterval = 10 * time.Second
+	}
+	if config.MaxSize < 0 {
+		config.MaxSize = 0
+	}
+	if config.EvictionPolicy < Basic || config.EvictionPolicy > LFU {
+		config.EvictionPolicy = Basic
 	}
 
 	c := &Cache{
-		config:  cfg,
+		config:  &config,
 		metrics: NewMetrics(),
+		stop:    make(chan struct{}),
 	}
 
-	switch cfg.EvictionPolicy {
+	switch config.EvictionPolicy {
 	case LRU:
-		c.engine = lru.New(cfg.MaxSize)
+		c.engine = lru.New(config.MaxSize)
 	case FIFO:
-		c.engine = fifo.New(cfg.MaxSize)
+		c.engine = fifo.New(config.MaxSize)
 	case LFU:
-		c.engine = lfu.New(cfg.MaxSize)
+		c.engine = lfu.New(config.MaxSize)
 	default:
-		c.engine = basic.New(cfg.MaxSize, cfg.TTL, cfg.CleanupInterval)
+		c.engine = basic.New(config.MaxSize, config.TTL, config.CleanupInterval)
 	}
 
-	go c.startCheckMemoryUsage()
+	if config.MemoryLimits > 0 && config.MemoryCheckInterval > 0 {
+		go c.startCheckMemoryUsage()
+	}
 
 	return c
 }
 
-// startCheckMemoryUsage periodically monitors the cache's memory usage.
+// startCheckMemoryUsage periodically monitors process heap allocation.
 //
 // If memory limits are set in CacheConfig, this function runs at the configured
 // interval (`MemoryCheckInterval`). When memory usage exceeds `MemoryLimits`,
@@ -102,16 +112,18 @@ func (c *Cache) startCheckMemoryUsage() {
 	ticker := time.NewTicker(c.config.MemoryCheckInterval)
 	defer ticker.Stop()
 
-	maxMem := uint64(c.config.MemoryLimits) * 1024 * 1024
+	maxMem := c.config.MemoryLimits
 
-	for range ticker.C {
-		var mem runtime.MemStats
-		runtime.ReadMemStats(&mem)
-		memAlloc := mem.Alloc / 1024 / 1024
-		if memAlloc > maxMem {
-			c.lock.Lock()
-			c.engine.Evict()
-			c.lock.Unlock()
+	for {
+		select {
+		case <-ticker.C:
+			var mem runtime.MemStats
+			runtime.ReadMemStats(&mem)
+			if mem.Alloc > maxMem {
+				c.engine.Evict()
+			}
+		case <-c.stop:
+			return
 		}
 	}
 }
@@ -132,20 +144,6 @@ func (c *Cache) Get(key string) (any, bool) {
 		return nil, false
 	}
 
-	if c.engine.IsExpirable() {
-		if c.engine.IsExpired(key) {
-			c.lock.RUnlock()
-			c.lock.Lock()
-			go c.engine.Delete(key)
-			c.lock.Unlock()
-
-			if c.config.Metrics {
-				c.metrics.IncrementMisses()
-			}
-			return nil, false
-		}
-	}
-
 	if c.config.Metrics {
 		c.metrics.IncrementHits()
 	}
@@ -155,40 +153,21 @@ func (c *Cache) Get(key string) (any, bool) {
 
 // Set stores a key-value pair in the cache.
 //
-// If the key already exists, its value is updated. If the cache has a size limit
-// (`MaxSize`) and is full, the eviction policy (FIFO, LRU, LFU) is applied to remove an item
-// before inserting the new one. If TTL is enabled, the item will expire after the configured duration.
+// If the key already exists, its value is updated. For FIFO, LRU, and LFU
+// policies, a positive MaxSize is enforced atomically by the selected engine.
+// Basic caches ignore MaxSize and use TTL expiration only. If TTL is positive,
+// the item expires after the configured duration.
 func (c *Cache) Set(key string, value string) {
 	if c.engine.IsExpirable() {
-		expiration := time.Now().Add(c.config.TTL)
-		c.engine.SetWithTTL(key, value, expiration)
-
-		if c.config.Metrics {
-			c.metrics.IncrementHits()
+		expiresAt := time.Time{}
+		if c.config.TTL > 0 {
+			expiresAt = time.Now().Add(c.config.TTL)
 		}
-
+		c.engine.SetWithTTL(key, value, expiresAt)
 		return
-	}
-
-	if c.engine.Has(key) {
-		c.engine.Set(key, value)
-
-		if c.config.Metrics {
-			c.metrics.IncrementHits()
-		}
-
-		return
-	}
-
-	if c.config.MaxSize > 0 && c.Len() >= c.config.MaxSize {
-		c.engine.Evict()
 	}
 
 	c.engine.Set(key, value)
-
-	if c.config.Metrics {
-		c.metrics.IncrementHits()
-	}
 }
 
 // Delete removes a key-value pair from the cache.
@@ -223,7 +202,19 @@ func (c *Cache) Evict() {
 // Metrics returns a pointer to the cache's metrics instance.
 //
 // The metrics track cache performance, including hits and misses.
-// If metrics are disabled in the configuration, this function may return nil.
+// The returned object is always non-nil; counters remain unchanged when metrics
+// collection is disabled in the configuration.
 func (c *Cache) Metrics() *Metrics {
 	return c.metrics
+}
+
+// Close stops background cleanup and memory-monitoring goroutines.
+// It is safe to call Close more than once.
+func (c *Cache) Close() {
+	c.closeOnce.Do(func() {
+		close(c.stop)
+		if closeable, ok := c.engine.(interface{ Close() }); ok {
+			closeable.Close()
+		}
+	})
 }

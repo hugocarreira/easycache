@@ -24,6 +24,10 @@ func (suite *CacheTestSuite) SetupTest() {
 	})
 }
 
+func (suite *CacheTestSuite) TearDownTest() {
+	suite.c.Close()
+}
+
 // Test `Set()` e `Get()`
 func (suite *CacheTestSuite) TestSetGet() {
 	suite.c.Set("A", "Item A")

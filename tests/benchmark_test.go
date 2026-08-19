@@ -1,50 +1,62 @@
 package tests
 
 import (
-	"fmt"
+	"strconv"
 	"testing"
-	"time"
 
 	"github.com/hugocarreira/easycache/cache"
 )
 
-var testCache *cache.Cache
-
-// Setup cache for benchmarks
-func init() {
-	testCache = cache.New(&cache.Config{
-		EvictionPolicy: cache.LRU,
-		MaxSize:        10000,
-		TTL:            60 * time.Second,
-	})
+func benchmarkKeys(prefix string, count int) []string {
+	keys := make([]string, count)
+	for i := range keys {
+		keys[i] = prefix + strconv.Itoa(i)
+	}
+	return keys
 }
 
 // Benchmark for `Set()`
 func BenchmarkCacheSet(b *testing.B) {
+	c := cache.New(&cache.Config{
+		EvictionPolicy: cache.LRU,
+		MaxSize:        10000,
+	})
+	b.Cleanup(c.Close)
+	keys := benchmarkKeys("key-", 20000)
+
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		key := fmt.Sprintf("key-%d", i)
-		testCache.Set(key, "value")
+		c.Set(keys[i%len(keys)], "value")
 	}
 }
 
 // Benchmark for `Get()`
 func BenchmarkCacheGet(b *testing.B) {
-	testCache.Set("existing-key", "value")
+	c := cache.New(&cache.Config{
+		EvictionPolicy: cache.LRU,
+		MaxSize:        10000,
+	})
+	b.Cleanup(c.Close)
+	c.Set("existing-key", "value")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		testCache.Get("existing-key")
+		c.Get("existing-key")
 	}
 }
 
 // Benchmark for `Delete()`
 func BenchmarkCacheDelete(b *testing.B) {
-	testCache.Set("delete-key", "value")
+	c := cache.New(&cache.Config{
+		EvictionPolicy: cache.LRU,
+		MaxSize:        10000,
+	})
+	b.Cleanup(c.Close)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		testCache.Delete("delete-key")
-		testCache.Set("delete-key", "value")
+		c.Delete("delete-key")
+		c.Set("delete-key", "value")
 	}
 }
 
@@ -54,14 +66,15 @@ func BenchmarkFIFOEviction(b *testing.B) {
 		EvictionPolicy: cache.FIFO,
 		MaxSize:        10000,
 	})
-
-	for i := 0; i < b.N; i++ {
-		key := fmt.Sprintf("key-%d", i)
+	b.Cleanup(c.Close)
+	keys := benchmarkKeys("key-", 20000)
+	for _, key := range keys[:10000] {
 		c.Set(key, "value")
+	}
 
-		if i >= 10000 {
-			c.Evict()
-		}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		c.Set(keys[i%len(keys)], "value")
 	}
 }
 
@@ -71,17 +84,18 @@ func BenchmarkLRUEviction(b *testing.B) {
 		EvictionPolicy: cache.LRU,
 		MaxSize:        10000,
 	})
-
-	for i := 0; i < b.N; i++ {
-		key := fmt.Sprintf("key-%d", i)
+	b.Cleanup(c.Close)
+	keys := benchmarkKeys("key-", 20000)
+	for _, key := range keys[:10000] {
 		c.Set(key, "value")
+	}
 
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := keys[i%len(keys)]
+		c.Set(key, "value")
 		if i%10 == 0 {
 			c.Get(key)
-		}
-
-		if i >= 10000 {
-			c.Evict()
 		}
 	}
 }
@@ -92,18 +106,19 @@ func BenchmarkLFUEviction(b *testing.B) {
 		EvictionPolicy: cache.LFU,
 		MaxSize:        10000,
 	})
-
-	for i := 0; i < b.N; i++ {
-		key := fmt.Sprintf("key-%d", i)
+	b.Cleanup(c.Close)
+	keys := benchmarkKeys("key-", 20000)
+	for _, key := range keys[:10000] {
 		c.Set(key, "value")
+	}
 
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := keys[i%len(keys)]
+		c.Set(key, "value")
 		if i%5 == 0 {
 			c.Get(key)
 			c.Get(key)
-		}
-
-		if i >= 10000 {
-			c.Evict()
 		}
 	}
 }
