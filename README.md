@@ -278,7 +278,7 @@ go test -run '^$' -bench=. -benchmem ./tests
 
 Latest local run with Go 1.25.9 on Linux/amd64 (Intel i9-10900KF):
 
-Current aggregate statement coverage: **99.0%** (`go test -coverpkg=./... ./tests`).
+Current aggregate statement coverage: **99.3%** (`go test -coverpkg=./... -coverprofile=/tmp/easycache.cover ./...`).
 
 | Benchmark | ns/op | B/op | allocs/op |
 |-----------|------:|-----:|----------:|

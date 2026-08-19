@@ -22,6 +22,12 @@ jobs:
       - name: Run Tests
         run: go test ./... -v
 
+      - name: Enforce Coverage
+        run: |
+          go test -coverpkg=./... -coverprofile=/tmp/easycache.cover ./...
+          go tool cover -func=/tmp/easycache.cover
+          go tool cover -func=/tmp/easycache.cover | awk '/^total:/ { found=1; gsub("%", "", $3); if ($3 < 90) exit 1 } END { if (!found) exit 1 }'
+
       - name: Run Race Detector
         run: go test -race ./...
 

@@ -47,7 +47,8 @@ go vet ./...
 ```
 
 ```sh
-go test -coverpkg=./... ./tests
+go test -coverpkg=./... -coverprofile=/tmp/easycache.cover ./...
+go tool cover -func=/tmp/easycache.cover
 ```
 
 ####  🚀 Performance Benchmarks  
