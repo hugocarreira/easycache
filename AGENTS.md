@@ -24,7 +24,7 @@ Follow idiomatic Go and let `gofmt` control tabs and layout. Package names are s
 
 ## Testing Guidelines
 
-Tests use Go's `testing` package with `testify/assert` and `testify/suite`. Name files `*_test.go`, test entry points `TestXxx`, and benchmarks `BenchmarkXxx`. Add coverage for normal behavior, eviction boundaries, expiration, and concurrency when relevant. No numeric coverage threshold is enforced, but every behavior change should include a regression test. Run tests, race detection, and `go vet` before submitting.
+Tests use Go's `testing` package with `testify/assert` and `testify/suite`. Name files `*_test.go`, test entry points `TestXxx`, and benchmarks `BenchmarkXxx`. Add coverage for normal behavior, eviction boundaries, expiration, and concurrency when relevant. CI enforces at least 90% aggregate statement coverage and rejects pull requests that lower coverage versus the base branch. Run tests, coverage, race detection, and `go vet` before submitting.
 
 ## Commit & Pull Request Guidelines
 

@@ -2,6 +2,11 @@ name: Run Tests
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -22,11 +27,93 @@ jobs:
       - name: Run Tests
         run: go test ./... -v
 
-      - name: Enforce Coverage
+      - name: Measure Coverage
+        id: coverage
         run: |
+          set -euo pipefail
           go test -coverpkg=./... -coverprofile=/tmp/easycache.cover ./...
-          go tool cover -func=/tmp/easycache.cover
-          go tool cover -func=/tmp/easycache.cover | awk '/^total:/ { found=1; gsub("%", "", $3); if ($3 < 90) exit 1 } END { if (!found) exit 1 }'
+          go tool cover -func=/tmp/easycache.cover | tee /tmp/easycache.coverage.txt
+          coverage=$(awk '/^total:/ { gsub("%", "", $3); print $3 }' /tmp/easycache.coverage.txt)
+          test -n "$coverage"
+          echo "coverage=$coverage" >> "$GITHUB_OUTPUT"
+
+      - name: Measure Base Coverage
+        if: github.event_name == 'pull_request'
+        id: base_coverage
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          base_dir=$(mktemp -d)
+          trap 'git worktree remove --force "$base_dir"' EXIT
+          git worktree add --detach "$base_dir" "origin/${{ github.base_ref }}"
+          (
+            cd "$base_dir"
+            go test -coverpkg=./... -coverprofile=/tmp/easycache-base.cover ./...
+            go tool cover -func=/tmp/easycache-base.cover > /tmp/easycache-base.coverage.txt
+          )
+          coverage=$(awk '/^total:/ { gsub("%", "", $3); print $3 }' /tmp/easycache-base.coverage.txt)
+          test -n "$coverage"
+          echo "coverage=$coverage" >> "$GITHUB_OUTPUT"
+
+      - name: Enforce Coverage Guardrail
+        if: always()
+        env:
+          CURRENT_COVERAGE: ${{ steps.coverage.outputs.coverage }}
+          BASE_COVERAGE: ${{ steps.base_coverage.outputs.coverage }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          test -n "$CURRENT_COVERAGE"
+          if awk -v current="$CURRENT_COVERAGE" 'BEGIN { exit !(current < 90) }'; then
+            echo "Coverage ${CURRENT_COVERAGE}% is below the 90% minimum."
+            exit 1
+          fi
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            test -n "$BASE_COVERAGE"
+            if awk -v current="$CURRENT_COVERAGE" -v base="$BASE_COVERAGE" 'BEGIN { exit !(current < base) }'; then
+              echo "Coverage decreased from ${BASE_COVERAGE}% to ${CURRENT_COVERAGE}%."
+              exit 1
+            fi
+          fi
+
+      - name: Comment Coverage on PR
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          CURRENT_COVERAGE: ${{ steps.coverage.outputs.coverage || 'unavailable' }}
+          BASE_COVERAGE: ${{ steps.base_coverage.outputs.coverage || 'unavailable' }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const marker = '<!-- easycache-coverage -->';
+            const current = process.env.CURRENT_COVERAGE;
+            const base = process.env.BASE_COVERAGE;
+            const currentValue = Number(current);
+            const baseValue = Number(base);
+            const passed = Number.isFinite(currentValue) && currentValue >= 90 &&
+              Number.isFinite(baseValue) && currentValue >= baseValue;
+            const body = `${marker}
+            ## Coverage
+
+            | Ref | Statement coverage |
+            | --- | ---: |
+            | PR | ${current}% |
+            | Base (${context.payload.pull_request.base.ref}) | ${base}% |
+            | Minimum | 90% |
+
+            **Guardrail:** ${passed ? '✅ passed' : '❌ failed'}
+            `;
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find(comment =>
+              comment.user?.type === 'Bot' && comment.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
 
       - name: Run Race Detector
         run: go test -race ./...

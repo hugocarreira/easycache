@@ -278,7 +278,7 @@ go test -run '^$' -bench=. -benchmem ./tests
 
 Latest local run with Go 1.25.9 on Linux/amd64 (Intel i9-10900KF):
 
-Current aggregate statement coverage: **99.3%** (`go test -coverpkg=./... -coverprofile=/tmp/easycache.cover ./...`).
+Current aggregate statement coverage: **99.3%** (`go test -coverpkg=./... -coverprofile=/tmp/easycache.cover ./...`). Pull requests must keep coverage at or above 90% and must not reduce it versus the base branch; CI reports both values in a PR comment.
 
 | Benchmark | ns/op | B/op | allocs/op |
 |-----------|------:|-----:|----------:|
