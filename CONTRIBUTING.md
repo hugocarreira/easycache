@@ -26,7 +26,7 @@ We love new ideas! 🚀 If you have a suggestion, open an **Issue** with:
 
 ## 🔄 Submitting a Pull Request (PR)
 
-✅ Open your pull request against `master`.  
+✅ Open your pull request against `main`.  
 ✅ Create a Pull Request with a clear description of your changes.
 
 
@@ -35,38 +35,23 @@ We love new ideas! 🚀 If you have a suggestion, open an **Issue** with:
 Before submitting code, ensure all tests pass:
 
 ```sh
-go test ./tests -v
+go test ./... -v
 ```
 
 ```sh
-go test -bench=. -benchmem ./tests
+go test -race ./...
 ```
 
-####  🚀 Performance Benchmarks
+```sh
+go vet ./...
+```
 
-We ran performance benchmarks on EasyCache to measure the efficiency of `Set()`, `Get()`, `Delete()`, and eviction policies (`FIFO`, `LRU`, `LFU`).
+####  🚀 Performance Benchmarks  
 
-| Benchmark                | Iterations  | Time per operation | Memory used | Allocations per op |
-|--------------------------|------------|--------------------|-------------|--------------------|
-| **`BenchmarkCacheSet`**   | 2,936,356  | **408.4 ns/op**    | **122 B/op**  | **5 allocs/op** |
-| **`BenchmarkCacheGet`**   | 39,143,538 | **30.79 ns/op**    | **0 B/op**    | **0 allocs/op** |
-| **`BenchmarkCacheDelete`**| 5,376,940  | **223.3 ns/op**    | **96 B/op**   | **3 allocs/op** |
-| **`BenchmarkFIFOEviction`** | 3,065,480 | **391.7 ns/op**    | **122 B/op**  | **5 allocs/op** |
-| **`BenchmarkLRUEviction`** | 3,045,759  | **402.1 ns/op**    | **122 B/op**  | **5 allocs/op** |
-| **`BenchmarkLFUEviction`** | 2,916,150  | **394.3 ns/op**    | **88 B/op**   | **4 allocs/op** |
-
-**Tested on:**  
-- **Go Version:** 1.23.5  
-- **Cache Configuration:** `MaxSize = 10,000`, `TTL = 60s`  
-
----
-
-##### 🛠️ Running the Benchmarks  
-
-To run the benchmarks yourself, use:  
+Run benchmarks locally when evaluating performance-sensitive changes:
 
 ```sh
-go test -bench=. -benchmem ./tests
+go test -run '^$' -bench=. -benchmem ./tests
 ```
 
 ## 🎯 Contributing Best Practices
@@ -75,4 +60,3 @@ go test -bench=. -benchmem ./tests
 ✅ Keep discussions focused – Avoid unrelated topics in issues/PRs.  
 ✅ Improve documentation – Even small fixes help!  
 ✅ Test your code – Ensure everything works before submitting.  
-

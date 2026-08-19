@@ -37,8 +37,8 @@ func New(maxSize int) engine.Engine {
 }
 
 func (c *FIFO) Get(key string) (any, bool) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
 	elem, exists := c.data[key]
 	if !exists {
@@ -55,6 +55,10 @@ func (c *FIFO) Set(key string, value any) {
 	if elem, exists := c.data[key]; exists {
 		elem.Value.(*cacheItem).value = value
 		return
+	}
+
+	if c.maxSize > 0 && len(c.data) >= c.maxSize {
+		c.evictLocked()
 	}
 
 	item := &cacheItem{key: key, value: value}
@@ -104,7 +108,10 @@ func (c *FIFO) IsExpired(key string) bool {
 func (c *FIFO) Evict() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	c.evictLocked()
+}
 
+func (c *FIFO) evictLocked() {
 	if len(c.data) == 0 {
 		return
 	}

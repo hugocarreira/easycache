@@ -2,6 +2,7 @@ package lfu
 
 import (
 	"container/heap"
+	"sync"
 	"time"
 
 	"github.com/hugocarreira/easycache/engine"
@@ -19,6 +20,7 @@ type LFU struct {
 	maxSize int
 	data    map[string]*cacheItem
 	lfuHeap *lfuHeap
+	lock    sync.RWMutex
 }
 
 type cacheItem struct {
@@ -40,6 +42,9 @@ func New(maxSize int) engine.Engine {
 }
 
 func (c *LFU) Get(key string) (any, bool) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	item, exists := c.data[key]
 	if !exists {
 		return nil, false
@@ -52,6 +57,9 @@ func (c *LFU) Get(key string) (any, bool) {
 }
 
 func (c *LFU) Set(key string, value any) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	if item, exists := c.data[key]; exists {
 		item.value = value
 		item.frequency++
@@ -59,9 +67,12 @@ func (c *LFU) Set(key string, value any) {
 		return
 	}
 
+	if c.maxSize > 0 && len(c.data) >= c.maxSize {
+		c.evictLocked()
+	}
+
 	item := &cacheItem{key: key, value: value, frequency: 1}
 	heap.Push(c.lfuHeap, item)
-	item.index = c.lfuHeap.Len() - 1
 	c.data[key] = item
 }
 
@@ -70,6 +81,9 @@ func (c *LFU) SetWithTTL(key string, value any, expiresAt time.Time) {
 }
 
 func (c *LFU) Delete(key string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	item, exists := c.data[key]
 	if !exists {
 		return
@@ -80,11 +94,17 @@ func (c *LFU) Delete(key string) {
 }
 
 func (c *LFU) Has(key string) bool {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	_, exists := c.data[key]
 	return exists
 }
 
 func (c *LFU) Len() int {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	return len(c.data)
 }
 
@@ -97,6 +117,12 @@ func (c *LFU) IsExpired(key string) bool {
 }
 
 func (c *LFU) Evict() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.evictLocked()
+}
+
+func (c *LFU) evictLocked() {
 	if len(c.data) == 0 {
 		return
 	}
@@ -132,6 +158,8 @@ func (l *lfuHeap) Pop() any {
 	old := *l
 	n := len(old)
 	item := old[n-1]
+	old[n-1] = nil
 	*l = old[0 : n-1]
+	item.index = -1
 	return item
 }

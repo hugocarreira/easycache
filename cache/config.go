@@ -11,25 +11,25 @@ type Config struct {
 	EvictionPolicy EvictionPolicy
 
 	// MaxSize defines the maximum number of items the cache can hold before evicting entries.
-	// A value of 0 means there is no limit.
+	// A value less than or equal to 0 means there is no limit.
 	MaxSize int
 
 	// TTL (Time-To-Live) specifies the duration before an item expires.
-	// If set to 0, items will not expire automatically.
+	// A value less than or equal to 0 disables expiration.
 	TTL time.Duration
 
 	// CleanupInterval defines how often expired items are removed from the cache.
 	// This is only applicable if TTL-based expiration is enabled.
 	CleanupInterval time.Duration
 
-	// MemoryLimits specifies the maximum memory usage (in bytes) before triggering cache cleanup.
+	// MemoryLimits specifies the maximum process heap allocation (in bytes) before triggering cache cleanup.
 	// A value of 0 means memory usage is not restricted.
 	MemoryLimits uint64
 
 	// MemoryCheckInterval sets the frequency at which memory usage is checked.
 	MemoryCheckInterval time.Duration
 
-	// Metrics indicates whether cache statistics (hits, misses, evictions) should be collected.
+	// Metrics indicates whether cache lookup statistics (hits and misses) should be collected.
 	Metrics bool
 }
 
@@ -42,7 +42,7 @@ func defaultConfig() *Config {
 		EvictionPolicy:      Basic,
 		MaxSize:             0,
 		TTL:                 60 * time.Second,
-		CleanupInterval:     120 * time.Second,
+		CleanupInterval:     10 * time.Second,
 		MemoryLimits:        0,
 		MemoryCheckInterval: 0,
 		Metrics:             false,

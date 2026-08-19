@@ -22,6 +22,10 @@ func (suite *LFUTestSuite) SetupTest() {
 	})
 }
 
+func (suite *LFUTestSuite) TearDownTest() {
+	suite.c.Close()
+}
+
 // Test LFU (Least Frequently Used)
 func (suite *LFUTestSuite) TestLFUEviction() {
 	suite.c.Set("A", "Item A")

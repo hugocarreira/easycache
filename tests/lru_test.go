@@ -22,6 +22,10 @@ func (suite *LRUTestSuite) SetupTest() {
 	})
 }
 
+func (suite *LRUTestSuite) TearDownTest() {
+	suite.c.Close()
+}
+
 // Test LRU (Least Recently Used)
 func (suite *LRUTestSuite) TestLRUEviction() {
 	suite.c.Set("A", "Item A")

@@ -15,10 +15,15 @@ jobs:
           go-version: 1.23.5
 
       - name: Install Dependencies
-        run: go mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
 
       - name: Run Tests
-        run: go test ./tests -v
+        run: go test ./... -v
 
-      - name: Run Benchmarks
-        run: go test -bench=. -benchmem ./tests
+      - name: Run Race Detector
+        run: go test -race ./...
+
+      - name: Run Vet
+        run: go vet ./...

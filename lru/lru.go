@@ -62,6 +62,10 @@ func (c *LRU) Set(key string, value any) {
 		return
 	}
 
+	if c.maxSize > 0 && len(c.data) >= c.maxSize {
+		c.evictLocked()
+	}
+
 	item := &cacheItem{key: key, value: value}
 	elem := c.evictionList.PushFront(item)
 	c.data[key] = elem
@@ -102,7 +106,10 @@ func (c *LRU) Len() int {
 func (c *LRU) Evict() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	c.evictLocked()
+}
 
+func (c *LRU) evictLocked() {
 	if len(c.data) == 0 {
 		return
 	}

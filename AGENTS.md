@@ -9,9 +9,9 @@ Keep policy-specific logic inside its strategy package. Changes to the public AP
 ## Build, Test, and Development Commands
 
 - `go test ./...` runs every package and the complete test suite.
-- `go test ./tests -v` runs the same focused test command used by CI.
+- `go test ./... -v` runs the complete test suite used by CI.
 - `go test -race ./...` checks concurrent cache operations for data races.
-- `go test -bench=. -benchmem ./tests` runs eviction and operation benchmarks with allocation statistics.
+- `go test -run '^$' -bench=. -benchmem ./tests` runs benchmarks without rerunning tests and includes allocation statistics.
 - `go vet ./...` performs standard static analysis.
 - `gofmt -w cache/*.go tests/*.go` formats changed Go files; include other edited package paths as needed.
 
@@ -27,4 +27,4 @@ Tests use Go's `testing` package with `testify/assert` and `testify/suite`. Name
 
 ## Commit & Pull Request Guidelines
 
-Prefix every commit subject with a parenthesized change type: `(feat)` for features, `(fix)` for bug fixes, `(docs)` for documentation, `(test)` for tests, `(refactor)` for internal restructuring, and `(chore)` for maintenance. Follow the prefix with a short, lowercase, imperative description, for example `(fix) prevent expired cache hits` or `(docs) clarify memory limits`. Keep each commit focused and avoid vague messages. Open pull requests against `master`, as requested in `CONTRIBUTING.md`. Include a concise change summary, motivation or linked issue, and the commands used to verify the work. Document benchmark impact for performance-sensitive changes and update examples when the public API changes.
+Prefix every commit subject with a parenthesized change type: `(feat)` for features, `(fix)` for bug fixes, `(docs)` for documentation, `(test)` for tests, `(refactor)` for internal restructuring, and `(chore)` for maintenance. Follow the prefix with a short, lowercase, imperative description, for example `(fix) prevent expired cache hits` or `(docs) clarify memory limits`. Keep each commit focused and avoid vague messages. Open pull requests against `main`. Include a concise change summary, motivation or linked issue, and the commands used to verify the work. Document benchmark impact for performance-sensitive changes and update examples when the public API changes.
